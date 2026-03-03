@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="Nevjegy" Height="450" Width="800">
     <Grid>
-        <Label HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0 40 0 0" FontSize="16" Content="A projektet készítette: Péterffy Dominika, Kamecz Martin, Hegymegi-Kiss Ákos 13.A"/>
+        <Label HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0 40 0 0" FontSize="16" Content="A projektet készítette: Péterffy Dominika, Kamecz Martin, Hegymegi-Kiss Ákos"/>
         <Label HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0 80 0 0" FontSize="16" Content="13.A osztályos tanulók"/>
         <Label HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,125,0,0" FontSize="16" Content="Projektünk témájának a kisállatokkal kapcsolatos termékeket árusító webshopot azért "/>
         <Label HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,155,0,0" FontSize="16" Content="választottuk, mert sok ember életében kiemelt szerepet töltenek be a házi kedvencek. "/>

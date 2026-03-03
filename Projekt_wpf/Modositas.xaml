@@ -5,11 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Projekt_wpf"
         mc:Ignorable="d"
-        Title="Módosítas" Height="500" Width="300" FontSize="18">
+        Title="Módosítás" Height="600" Width="300" FontSize="18">
     <Grid>
-        <WrapPanel Orientation="Vertical">
+        <WrapPanel Orientation="Vertical" Margin="0, 20,0, 0">
             <Label Content="ID (nem módosítható):" Grid.Row="0"/>
-            <TextBox x:Name="tbxId" IsReadOnly="True" Width="250" Margin="10" TextChanged="txtID_TextChanged"/>
+            <TextBox x:Name="tbxId" IsReadOnly="True" Width="250" Margin="10"/>
+            <Label Content="Alkategória id:" Grid.Row="0"/>
+            <TextBox x:Name="tbxAlkategoriaId" Width="250" Margin="10"/>
             <Label Content="Név:"/>
             <TextBox x:Name="tbxNev" Width="250" Margin="10"/>
             <Label Content="Ár:"/>

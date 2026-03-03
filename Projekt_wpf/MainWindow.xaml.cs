@@ -6,24 +6,30 @@ using System.Data;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Projekt_wpf {
-    public partial class MainWindow : Window {
+namespace Projekt_wpf
+{
+    public partial class MainWindow : Window
+    {
         public static ObservableCollection<Termek> Nyilvantartas { get; } = new ObservableCollection<Termek>();
-        private int selectedIndex = -1; // Nem static, per-példány
+        private static List<int> DeletedIds { get; } = new List<int>();
+        private int selectedIndex = -1;
 
-        private string connectionString = "server=localhost;database=kisallat_webshop;uid=root;pwd="; // Tedd bele a jelszót ha kell
+        private string connectionString = "server=localhost;database=kisallat_webshop;uid=root;pwd="; // Add password if needed
 
-        public MainWindow() {
+        public MainWindow()
+        {
             InitializeComponent();
-            dtgAdatok.ItemsSource = Nyilvantartas; // Eleve bindeljük az ObservableCollection-höz
+            dtgAdatok.ItemsSource = Nyilvantartas;
         }
 
-        private void btnBetolt_Click(object sender, RoutedEventArgs e) {
+        private void btnBetolt_Click(object sender, RoutedEventArgs e)
+        {
             LoadDataToGrid();
         }
 
-        private void LoadDataToGrid() {
-            string query = "SELECT id, nev, ar, akcios_ar, keszlet FROM termekek";
+        private void LoadDataToGrid()
+        {
+            string query = "SELECT id, alkategoria_id, nev, ar, akcios_ar, keszlet FROM termekek";
 
             try
             {
@@ -39,11 +45,12 @@ namespace Projekt_wpf {
                         foreach (DataRow row in dataTable.Rows)
                         {
                             Nyilvantartas.Add(new Termek(
-                                Convert.ToInt32(row["id"]),
-                                row["nev"].ToString(),
-                                Convert.ToInt32(row["ar"]),
-                                Convert.ToInt32(row["akcios_ar"]),
-                                Convert.ToInt32(row["keszlet"])
+                                Convert.ToInt32(row["id"]),  // id nem lehet NULL
+                                Convert.ToInt32(row["alkategoria_id"]),  // id nem lehet NULL
+                                row["nev"].ToString() ?? "",  // NULL esetén üres string
+                                row["ar"] == DBNull.Value ? 0 : Convert.ToInt32(row["ar"]),
+                                row["akcios_ar"] == DBNull.Value ? 0 : Convert.ToInt32(row["akcios_ar"]),  // Vagy row["ar"] értékét használd, ha logikus
+                                row["keszlet"] == DBNull.Value ? 0 : Convert.ToInt32(row["keszlet"])
                             ));
                         }
                     }
@@ -55,22 +62,12 @@ namespace Projekt_wpf {
             }
         }
 
-        // Új termék hozzáadása (memóriába, de mentés később)
-        public static void TermekFelvitel(Termek ujTermek) {
+        public static void TermekFelvitel(Termek ujTermek)
+        {
             Nyilvantartas.Add(ujTermek);
         }
 
-        private void btnKilep_Click(object sender, RoutedEventArgs e) {
-            Application.Current.Shutdown();
-        }
-
-        private void btnNevjegy_Click(object sender, RoutedEventArgs e) {
-            Nevjegy nevjegy = new Nevjegy();
-            nevjegy.Show();
-        }
-
-        // Módosítás (memóriába, de mentés később)
-        public void TermekModositas(Termek modositottTermek) // Nem static, mert index per-példány
+        public void TermekModositas(Termek modositottTermek)
         {
             if (selectedIndex >= 0 && selectedIndex < Nyilvantartas.Count)
             {
@@ -78,56 +75,107 @@ namespace Projekt_wpf {
             }
         }
 
-        // Kijelölés esemény (szerkesztés indítása)
-        private void dtgAdatok_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+        private void btnKilep_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void btnNevjegy_Click(object sender, RoutedEventArgs e)
+        {
+            Nevjegy nevjegy = new Nevjegy();
+            nevjegy.Show();
+        }
+
+        private void dtgAdatok_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
             if (dtgAdatok.SelectedItem is Termek selectedTermek)
             {
                 selectedIndex = Nyilvantartas.IndexOf(selectedTermek);
-                // Ha automatikusan akarod nyitni a módosító ablakot, ide tedd:
-                // new Modositas(selectedTermek, "Modify").ShowDialog();
-                // De jobb, ha külön gomb van a szerkesztésre.
             }
         }
 
-        // ÚJ: Gomb az új termék hozzáadásához (add hozzá XAML-ben: <Button Content="Új" Click="btnUj_Click"/>)
-        private void btnUj_Click(object sender, RoutedEventArgs e) {
-            var ujTermek = new Termek(0, "", 0, 0, 0); // ID=0, majd DB generálja
-            new Modositas(ujTermek, "Add").ShowDialog();
+        private void btnFelvisz_Click(object sender, RoutedEventArgs e)
+        {
+            new Modositas(new Termek(0, 0, "", 0, 0, 0), "Add", this).ShowDialog();
         }
 
-        // Mentés gomb: Visszaírja az összes változást DB-be
-        private void btnMent_Click(object sender, RoutedEventArgs e) {
+        private void btnModosit_Click(object sender, RoutedEventArgs e)
+        {
+            if (selectedIndex >= 0)
+            {
+                var selectedTermek = Nyilvantartas[selectedIndex];
+                new Modositas(selectedTermek, "Modify", this).ShowDialog();
+            }
+            else
+            {
+                MessageBox.Show("Válasszon ki egy terméket a módosításhoz!");
+            }
+        }
+
+        private void btnTorol_Click(object sender, RoutedEventArgs e)
+        {
+            if (selectedIndex >= 0)
+            {
+                var termek = Nyilvantartas[selectedIndex];
+                if (termek.Id != 0)
+                {
+                    DeletedIds.Add(termek.Id);
+                }
+                Nyilvantartas.RemoveAt(selectedIndex);
+                selectedIndex = -1;
+            }
+            else
+            {
+                MessageBox.Show("Válasszon ki egy terméket a törléshez!");
+            }
+        }
+
+        private void btnMent_Click(object sender, RoutedEventArgs e)
+        {
             try
             {
                 using (MySqlConnection connection = new MySqlConnection(connectionString))
                 {
                     connection.Open();
 
+                    // Handle deletes
+                    foreach (var id in DeletedIds)
+                    {
+                        string deleteQuery = "DELETE FROM termekek WHERE id = @id";
+                        using (MySqlCommand cmd = new MySqlCommand(deleteQuery, connection))
+                        {
+                            cmd.Parameters.AddWithValue("@id", id);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    DeletedIds.Clear();
+
+                    // Handle inserts and updates
                     foreach (var termek in Nyilvantartas)
                     {
-                        if (termek.Id == 0) // Új termék (ID=0 alapján)
-                        {
-                            string insertQuery = "INSERT INTO termekek (id, nev, ar, akcios_ar, keszlet) VALUES (@id, @nev, @ar, @akcios_ar, @keszlet)";
+                        if (termek.Id == 0)
+                        { // New product
+                            string insertQuery = "INSERT INTO termekek (alkategoria_id, nev, ar, akcios_ar, keszlet) VALUES (@alkategoria_id, @nev, @ar, @akcios_ar, @keszlet)";
                             using (MySqlCommand cmd = new MySqlCommand(insertQuery, connection))
                             {
-                                cmd.Parameters.AddWithValue("@id", termek.Id);
+                                cmd.Parameters.AddWithValue("@alkategoria_id", termek.Alkategoria_id);
                                 cmd.Parameters.AddWithValue("@nev", termek.Nev);
                                 cmd.Parameters.AddWithValue("@ar", termek.Ar);
                                 cmd.Parameters.AddWithValue("@akcios_ar", termek.Akcios_ar);
                                 cmd.Parameters.AddWithValue("@keszlet", termek.Keszlet);
                                 cmd.ExecuteNonQuery();
 
-                                // Lekérdezzük az új ID-t
                                 cmd.CommandText = "SELECT LAST_INSERT_ID()";
                                 termek.Id = Convert.ToInt32(cmd.ExecuteScalar());
                             }
                         }
-                        else // Módosítás
-                        {
-                            string updateQuery = "UPDATE termekek SET nev = @nev, ar = @ar, akcios_ar = @akcios_ar, keszlet = @keszlet WHERE id = @id";
+                        else
+                        { // Update
+                            string updateQuery = "UPDATE termekek SET alkategoria_id = @alkategoria_id, nev = @nev, ar = @ar, akcios_ar = @akcios_ar, keszlet = @keszlet WHERE id = @id";
                             using (MySqlCommand cmd = new MySqlCommand(updateQuery, connection))
                             {
                                 cmd.Parameters.AddWithValue("@id", termek.Id);
+                                cmd.Parameters.AddWithValue("@alkategoria_id", termek.Alkategoria_id);
                                 cmd.Parameters.AddWithValue("@nev", termek.Nev);
                                 cmd.Parameters.AddWithValue("@ar", termek.Ar);
                                 cmd.Parameters.AddWithValue("@akcios_ar", termek.Akcios_ar);
@@ -138,7 +186,7 @@ namespace Projekt_wpf {
                     }
                 }
                 MessageBox.Show("Változások sikeresen mentve az adatbázisba!");
-                LoadDataToGrid(); // Frissítjük a gridet
+                LoadDataToGrid(); // Refresh grid
             }
             catch (Exception ex)
             {
